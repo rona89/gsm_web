@@ -1,5 +1,4 @@
-# gsm_web
-GSM - Web + scripts
+***GSM - Web + scripts***
 
 file "bts.sh" shoulbe be on /etc/init.d/bts.sh
 file "crontab" ... /etc/crontab
