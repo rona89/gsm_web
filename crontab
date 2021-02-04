@@ -1,0 +1,2 @@
+*/2 *   * * *   root    /opt/gsm/generate_points.sh 2>/dev/null
+*   *   * * *   root    sed -i "/-  -  -/d" /var/www/bts.log 2>/dev/null
