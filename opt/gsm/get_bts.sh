@@ -1,8 +1,8 @@
 #!/bin/bash
-LOG='/opt/gsm/bts.log'
-DIR='/opt/gsm/'
-TMP_FILE='/tmp/gnokii.tmp'
-GPS_FILE='/tmp/gps.gpx'
+LOG="/opt/gsm/bts.log"
+DIR="/opt/gsm/"
+TMP_FILE="/tmp/gnokii.tmp"
+GPS_FILE="/opt/gsm/gps.gpx"
 ext=".clf"
 modem="modem"
 cd ${DIR}
@@ -12,7 +12,7 @@ for conf in `ls ${modem}/ | grep ".conf$"`; do
  gnokii --config ${modem}/${conf} --monitor once | egrep "RFLevel:|Battery:|Power Source:" >> ${TMP_FILE}
 
  NC=`cat ${TMP_FILE} | grep "Network code" | cut -d ":" -f2 | tr -d " "`
- if [ ${NC} == "undefined" ]; then
+ if [ ${NC} == "undefined" ]; then 
   NC='23106'
  fi
 
@@ -58,39 +58,50 @@ for conf in `ls ${modem}/ | grep ".conf$"`; do
 
  DESC=`cat ${DIR}${NC}${ext} | grep ${CELLID} | cut -d ';' -f8 | head -n 1`
 
- echo "${NC} - ${CELLID} - ${LAC} - ${RFLEVEL}dB - ${LAT} - ${LON} - ${BAT}% - ${POWERSOURCE} - ${DESC}"
+ if [ ${NC} != "" ]; then
+  echo "${NC} - ${CELLID} - ${LAC} - ${RFLEVEL}dB - ${LAT} - ${LON} - ${BAT}% - ${POWERSOURCE} - ${DESC}"
+ fi
 
 
-
-
+# File, created bts.php
  if [ -f "${LOG}" ]; then
   if [ `cat ${LOG} | grep ${NC} | wc -l` == '1' ]; then
-   sed -i "s/${NC}.*/${NC} - ${CELLID} - ${LAC} - ${RFLEVEL}dB - ${LAT} - ${LON} - ${BAT}% - ${POWERSOURCE} - ${DESC}/" ${LOG}
-   sed -i "/-  -  -/d" ${LOG}
+   if [ ${NC} != "" ]; then
+    sed -i "s/${NC}.*/${NC} - ${CELLID} - ${LAC} - ${RFLEVEL}dB - ${LAT} - ${LON} - ${DESC}/" ${LOG}
+    sed -i "/-  -  -/d" ${LOG}
+   fi
   else
-   echo "${NC} - ${CELLID} - ${LAC} - ${RFLEVEL}dB - ${LAT} - ${LON} - ${BAT}% - ${POWERSOURCE} - ${DESC}" >> ${LOG}
+   if [ ${NC} != "" ]; then
+    echo "${NC} - ${CELLID} - ${LAC} - ${RFLEVEL}dB - ${LAT} - ${LON} - ${DESC}" >> ${LOG}
+  fi
   fi
  fi
 
 
 
+# clf file
+ if [ -f "${DIR}${NC}${ext}" ]; then	# If file exist
+  if [ `cat ${DIR}${NC}${ext} | grep ${CELLID} | wc -l` -ne "0" ]; then # If cellid exist
 
- if [ -f "${DIR}${NC}${ext}" ]; then    # If file exist
-   echo "File ${NC}${ext} exist"
-   if [ `cat ${DIR}${NC}${ext} | grep ${CELLID} | wc -l` -ne "0" ]; then # If cellid exist
-     echo "CellID ${CELLID} exist"
-     if [ `cat ${DIR}${NC}${ext} | grep ${CELLID} | grep "+0.000000" | wc -l` -ne "0" ]; then # If cellid has not gps in file, replace it
-       echo "Replace position for ${CELLID} with correct ${LAT};${LON}"
-       sed -i "/${NC};${CELLID};/d" ${DIR}${NC}${ext}
-       echo "${NC};${CELLID};${LAC};00000;${LAT};${LON};${RFLEVEL};${DESC};0" >> ${DIR}${NC}${ext}
-     fi
-   else # If cellid not exist
-     echo "${NC};${CELLID};${LAC};00000;${LAT};${LON};${RFLEVEL};no info;0" >> ${DIR}${NC}${ext}
-     echo "CellID ${CELLID} not exist"
+   if [ `cat ${DIR}${NC}${ext} | grep ${CELLID} | grep "+0.000000" | wc -l` -ne "0" ]; then # If cellid has not gps in file, replace it
+    sed -i "/${NC};${CELLID};/d" ${DIR}${NC}${ext}	# Delete line
+    echo "${NC};${CELLID};${LAC};00000;${LAT};${LON};${RFLEVEL};${DESC};0" >> ${DIR}${NC}${ext} # Insert new line
+   fi
+
+   if [ ${NC} != "23106" ]; then
+    LACE=`cat ${DIR}${NC}${ext} | grep ${CELLID} | grep -v ${LAC} | cut -d ";" -f3`
+    if [ ${LACE} != ${LAC} ]; then
+     echo "Ine LAC pre CellID ${CELLID}. Povodne {$LACE}, nove {$LAC}. ${DESC}" >> LAC_change.log
+     sed -i "/${NC};${CELLID};${LACE};/d" ${DIR}${NC}${ext}      # Delete line
     fi
-  else # If file not exist > Create it
-    echo "${NC};${CELLID};${LAC};00000;${LAT};${LON};${RFLEVEL};no info;0" >> ${DIR}${NC}${ext}
-    echo "File ${NC}${ext} not exist"
- fi
+   fi
+
+
+  else # If cellid not exist
+   echo "${NC};${CELLID};${LAC};00000;${LAT};${LON};${RFLEVEL};no info;0" >> ${DIR}${NC}${ext}
+  fi
+ else # If file not exist > Create it
+  echo "${NC};${CELLID};${LAC};00000;${LAT};${LON};${RFLEVEL};no info;0" >> ${DIR}${NC}${ext}
+ fi 
 
 done
